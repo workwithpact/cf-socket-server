@@ -31,12 +31,6 @@ export default class User {
       try {
         const parsedMessage = JSON.parse(message.data) as SocketData
         const type = parsedMessage.type;
-        socket.send('received' + message.data + type + ' and...' + JSON.stringify(Object.keys(this.listeners).map(v => {
-          return {
-            key: v,
-            length: (this.listeners[v] || []).length
-          }
-        })))
 
         if (type === 'close') {
           socket.close();
