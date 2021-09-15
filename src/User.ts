@@ -70,8 +70,10 @@ export default class User {
   processIncomingMessage(message: SocketData) {
     const type = message.type;
     if (type === 'close') {
-      this.socket?.close();
-      return;
+      try {
+        this.socket?.close();
+      } catch(e) {}
+      this.connected = false;
     }
     try {
       const callbacks = this.listeners[type] || [];
@@ -135,6 +137,7 @@ export default class User {
       try{
         this.socket?.close();
       } catch (e) {}
+      this.trigger('close');
       console.error('Could not send to socket; Closed it as a result.');
     }
   }
