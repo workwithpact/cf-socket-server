@@ -239,7 +239,8 @@ export class ChatRoom {
         this.broadcastToSubscribers(`ephemeralPoll:${id}`, pollResults)
 
       })
-      this.sessions = this.sessions.filter((session) => session !== user);
+      this.sessions = this.sessions.filter((session) => session !== user)
+      client.close();
     })
   }
 

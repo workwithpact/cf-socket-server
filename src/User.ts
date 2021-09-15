@@ -11,6 +11,7 @@ export default class User {
   connected:boolean = false;
   listeners: {[key: string]: ((data: any, type: SocketDataTypes) => void)[]} = {};
   pingInterval?: number;
+  lastCommunicationTimestamp?:number;
 
   constructor({id=null, suffix=0, name='', properties={}, connectionDetails={}, socket = undefined} : UserData) {
     this.id = id || uuid();
@@ -37,6 +38,7 @@ export default class User {
       try {
         const parsedMessage = JSON.parse(message.data) as SocketData
         this.processIncomingMessage(parsedMessage);
+        this.lastCommunicationTimestamp = (new Date()).getTime()
       } catch(e:any) {
         console.error('Something went wrong processing callbacks', e.message, e.stack)
       }
@@ -60,10 +62,15 @@ export default class User {
       clearInterval(this.pingInterval);
     }
     this.pingInterval = setInterval(() => {
+      const now:number = (new Date()).getTime()
+      const timeout = 25 * 2 * 1000
       this.send({
         type: "ping",
-        data: (new Date()).getTime()
+        data: now
       })
+      if (this.lastCommunicationTimestamp && (now - this.lastCommunicationTimestamp) >= timeout) {
+        this.close();
+      }
     }, 25000)
   }
 
@@ -112,6 +119,10 @@ export default class User {
     }
   }
 
+  close() {
+    this.trigger('close');
+  }
+
   getPublicProperties(): {[key: string]: any} {
     const publicProperties:{[key: string]: any} = {}
     Object.keys(this.properties || {}).filter(v => v.indexOf('_') !== 0 && v !== 'subscriptions').forEach(k => publicProperties[k] = this.properties[k])
@@ -135,6 +146,7 @@ export default class User {
         type: message
       } : message;
       this.socket?.send(JSON.stringify(finalMessage))
+      this.lastCommunicationTimestamp = (new Date()).getTime()
     } catch(e) {
       this.connected = false;
       try{
