@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style type="text/css">
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+html {
+  height: 100%;
+}
+
+#wrapper {
+  width:90%;
+  max-width:1280px;
+  margin: auto auto;
+  position: relative;
+}
+.section {
+  display: none;
+}
+.section.active {
+  display: block;
+}
+
+input#username{ 
+  border: none;
+  border-bottom: 1px solid #000;
+}
+
+#loading {
+  text-align: center;
+  margin: 15%;
+  font-size: 32px;
+}
+#loading + #wrapper {
+  display: none;
+}
+.choice {
+  margin: 15px 0;
+  position: relative;
+}
+.choice:after, .choice:before {
+  display: block;
+  border-radius: 30px;
+  border: 2px solid #ccc;
+  content: '';
+  height:15px;
+}
+.choice:before {
+  position: absolute;
+  left:0;
+  bottom:0;
+  width: var(--percentage);
+  border-color: transparent;
+  background: orange;
+  transition: all 0.2s ease-in-out;
+}
+.choice__count {
+  float: right;
+}
+.choice__count:after {
+  content: ' vote(s)';
+}
+</style>
+  </head>
+  <body>
+    <div id="loading">Initiating WebSocket...</div>
+    <div id="wrapper">
+      <form id="nameChooser" class="section active">
+        <h1>Welcome to Pact's Poll App Demo!</h1>
+        <h2>What's your favorite color? Click to vote!</h2>
+        <div id="pollResults">
+        </div>
+      </form>
+    </div>
+  </body>
+
+<!--===================================================================================-->
+<!-- Client-side JavaScript code for the app. -->
+
+<script type="text/javascript">
+(function() {
+  let choices = ['Green', 'Red', 'Purple', 'Orange']
+  let currentWebSocket = null;
+  let send = (type, data) => {
+    currentWebSocket.send(JSON.stringify({
+      type,
+      data
+    }))
+  }
+
+  let results = document.getElementById('pollResults')
+  choices.forEach(choice => {
+    let html = document.createElement('div')
+    html.classList.add('choice')
+    html.setAttribute('data-value', choice)
+    html.addEventListener('click', () => {
+      console.log('asdasd');
+      send('ephemeralPoll', {
+        id: 'fav_color',
+        answer: choice
+      })
+    })
+    let text = document.createElement('span')
+    text.innerText = choice
+    text.classList.add('choice__text')
+    let count = document.createElement('span')
+    count.classList.add('choice__count')
+    html.appendChild(text)
+    html.appendChild(count)
+    results.appendChild(html)
+  })
+
+  let hostname = window.location.host
+  let params = new URLSearchParams(window.location.search)
+  let room = params.get('room') || 'demo';
+  if (!hostname || hostname.indexOf('.workers.dev') === -1) {
+    hostname = 'socket-server.213a.workers.dev';
+  }
+  currentWebSocket = new WebSocket(`wss://${hostname}/websocket?room=${encodeURIComponent(room)}`)
+  currentWebSocket.addEventListener('open', () => {
+    document.getElementById('loading').remove()
+    send('subscribe', 'ephemeralPoll:fav_color')
+  });
+
+  currentWebSocket.addEventListener('message', (msg => {
+    console.log('message!', msg.data)
+    const data = JSON.parse(msg.data);
+    console.log({data})
+    if (data && data.type === 'ephemeralPoll' && data.data && data.data.id === 'fav_color') {
+      let results = {};
+      let total = 0;
+      choices.forEach(choice => results[choice] = 0)
+      Object.keys(data.data.stats).filter(choice => typeof results[choice] != 'undefined').forEach(choice => {
+        results[choice] = data.data.stats[choice];
+        total += results[choice];
+      })
+      choices.forEach(choice => {
+        const el = document.querySelector(`.choice[data-value="${choice}"]`)
+        el.querySelector('.choice__count').innerText = `${results[choice]}`;
+        el.setAttribute('style', `--percentage: ${total === 0 ? 0 : 100 * (results[choice] / total)}%;`);
+      })
+    }
+  }))
+
+  return;
+})()
+
+</script>
+<!--===================================================================================-->
+</html>
