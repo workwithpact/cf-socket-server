@@ -57,6 +57,18 @@ export class ChatRoom {
         })
     }
   }
+  generatePollSocketData(id:string, type:SocketDataTypes = 'poll'):SocketData {
+    const pollObject = type === 'poll' ? this.polls : this.ephemeralPolls;
+    const pollResults:SocketData = {
+      type,
+      data: {
+        id,
+        stats: {}
+      }
+    }
+    Object.keys(this.ephemeralPolls[id]).forEach(ans => pollResults.data.stats[ans] = Object.keys(this.ephemeralPolls[id][ans]).length)
+    return pollResults
+  }
   broadcast(message: SocketData | string, data:any = null) {
     this.sessions.forEach(session => session.send(message, data))
   }
@@ -105,6 +117,19 @@ export class ChatRoom {
       const eventId = parts.join(':') || 'all'
       user.properties.subscriptions[eventType] = user.properties.subscriptions[eventType] || {}
       user.properties.subscriptions[eventType][eventId] = true
+
+      /* Upon subscription to a poll or ephemeralPoll, we send out stats for that poll */
+      if (eventType === 'poll') {
+        Object.keys(this.polls).filter(id => id === eventId || eventId === 'all').forEach(id => {
+          const pollResults:SocketData = this.generatePollSocketData(id, 'poll');
+          this.broadcastToSubscribers(`poll:${id}`, pollResults)
+        })
+      } else if(eventType === 'ephemeralPoll') {
+        Object.keys(this.ephemeralPolls).filter(id => id === eventId || eventId === 'all').forEach(id => {
+          const pollResults:SocketData = this.generatePollSocketData(id, 'ephemeralPoll');
+          this.broadcastToSubscribers(`poll:${id}`, pollResults)
+        })
+      }
     })
 
     user.on('unsubscribe', (channel) => {
@@ -138,17 +163,7 @@ export class ChatRoom {
           delete pollsObject[id][ans][user.id];
         }
       })
-      pollsObject[id][answer] = pollsObject[id][answer] || {}
-      pollsObject[id][answer][user.id] = null;
-      const pollResults:SocketData = {
-        type,
-        data: {
-          id,
-          stats: {}
-        }
-      }
-      Object.keys(pollsObject[id]).forEach(ans => pollResults.data.stats[ans] = Object.keys(pollsObject[id][ans]).length)
-      this.broadcastToSubscribers(`${type}:${id}`, pollResults)
+      this.broadcastToSubscribers(`${type}:${id}`, this.generatePollSocketData(id, type))
     }
     user.on('poll', onPoll)
 
@@ -178,14 +193,7 @@ export class ChatRoom {
         })
       })
       polls.forEach(id => {
-        const pollResults:SocketData = {
-          type: 'ephemeralPoll',
-          data: {
-            id,
-            stats: {}
-          }
-        }
-        Object.keys(this.ephemeralPolls[id]).forEach(ans => pollResults.data.stats[ans] = Object.keys(this.ephemeralPolls[id][ans]).length)
+        const pollResults:SocketData = this.generatePollSocketData(id, 'ephemeralPoll');
         this.broadcastToSubscribers(`ephemeralPoll:${id}`, pollResults)
 
       })
