@@ -71,7 +71,7 @@ body { margin: 0; padding: 0; }
       const parts = loc.split(',')
       const lng = parts.shift();
       const lat = parts.shift();
-      if (!markers[loc]) {
+      if (!markers[loc] && data[loc]) {
         markers[loc] = {
           marker: new mapboxgl.Marker().setLngLat([lat * 1, lng * 1])
         }
