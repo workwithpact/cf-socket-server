@@ -142,12 +142,12 @@ export class ChatRoom {
       if (eventType === 'poll') {
         Object.keys(this.polls).filter(id => id === eventId || eventId === 'all').forEach(id => {
           const pollResults:SocketData = this.generatePollSocketData(id, 'poll');
-          this.broadcastToSubscribers(`poll:${id}`, pollResults)
+          user.send(`poll:${id}`, pollResults)
         })
       } else if(eventType === 'ephemeralPoll') {
         Object.keys(this.ephemeralPolls).filter(id => id === eventId || eventId === 'all').forEach(id => {
           const pollResults:SocketData = this.generatePollSocketData(id, 'ephemeralPoll');
-          this.broadcastToSubscribers(`ephemeralPoll:${id}`, pollResults)
+          user.send(`ephemeralPoll:${id}`, pollResults)
         })
       }
     })
