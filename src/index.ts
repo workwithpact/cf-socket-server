@@ -22,6 +22,12 @@ async function handleRequest(request: Request, env: Env) {
   const url:URL = new URL(request.url);
   const params:URLSearchParams = new URLSearchParams(url.search);
   switch(url.pathname) {
+    case '/':
+      return new Response(indexHtml, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        }
+      })
     case '/chat':
       return new Response(chatHtml, {
         headers: {

@@ -41,7 +41,7 @@ export class ChatRoom {
     const params:URLSearchParams = new URLSearchParams(url.search);
     this.name = params.get('room') || 'default';
     switch(url.pathname) {
-      case '/':
+      case '/details':
         return new Response(JSON.stringify(await this.getRoomDetails()))
       case '/websocket' :
         if (request.headers.get("Upgrade") != "websocket") {
