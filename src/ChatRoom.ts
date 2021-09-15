@@ -163,6 +163,9 @@ export class ChatRoom {
           delete pollsObject[id][ans][user.id];
         }
       })
+      pollsObject[id][answer] = pollsObject[id][answer] || {};
+      pollsObject[id][answer][user.id] = null;
+      
       this.broadcastToSubscribers(`${type}:${id}`, this.generatePollSocketData(id, type))
     }
     user.on('poll', onPoll)
