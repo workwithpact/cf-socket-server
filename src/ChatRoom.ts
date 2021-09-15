@@ -257,7 +257,7 @@ export interface RoomDetails {
   ephemeralPollCount: number;
 }
 
-export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile';
+export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile' | 'ping';
 
 export interface SocketData {
   type: SocketDataTypes;

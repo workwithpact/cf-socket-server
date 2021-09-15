@@ -9,7 +9,8 @@ export default class User {
   connectionDetails: {[key: string]: any}
   socket?: WebSocket | null;
   connected:boolean = false;
-  listeners: {[key: string]: ((data: any, type: SocketDataTypes) => void)[]} = {}
+  listeners: {[key: string]: ((data: any, type: SocketDataTypes) => void)[]} = {};
+  pingInterval?: number;
 
   constructor({id=null, suffix=0, name='', properties={}, connectionDetails={}, socket = undefined} : UserData) {
     this.id = id || uuid();
@@ -41,6 +42,9 @@ export default class User {
       }
     })
     socket?.addEventListener('close', () => {
+      if (this.pingInterval) {
+        clearInterval(this.pingInterval);
+      }
       const type = 'close';
       this.connected = false;
       const callbacks = this.listeners[type] || [];
@@ -52,6 +56,15 @@ export default class User {
         }
       });
     })
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+    this.pingInterval = setInterval(() => {
+      this.send({
+        type: "ping",
+        data: true
+      })
+    }, 25000)
   }
 
   processIncomingMessage(message: SocketData) {
