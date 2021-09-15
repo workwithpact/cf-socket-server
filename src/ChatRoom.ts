@@ -66,7 +66,7 @@ export class ChatRoom {
         stats: {}
       }
     }
-    Object.keys(this.ephemeralPolls[id]).forEach(ans => pollResults.data.stats[ans] = Object.keys(this.ephemeralPolls[id][ans]).length)
+    Object.keys(pollObject[id] || {}).forEach(ans => pollResults.data.stats[ans] = Object.keys(pollObject[id][ans]).length)
     return pollResults
   }
   broadcast(message: SocketData | string, data:any = null) {
@@ -165,7 +165,7 @@ export class ChatRoom {
       })
       pollsObject[id][answer] = pollsObject[id][answer] || {};
       pollsObject[id][answer][user.id] = null;
-      
+
       this.broadcastToSubscribers(`${type}:${id}`, this.generatePollSocketData(id, type))
     }
     user.on('poll', onPoll)
