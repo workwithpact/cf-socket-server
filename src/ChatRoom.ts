@@ -43,6 +43,13 @@ export class ChatRoom {
     switch(url.pathname) {
       case '/details':
         return new Response(JSON.stringify(await this.getRoomDetails()))
+      case '/users':
+        return new Response(JSON.stringify(this.sessions.map(u => {
+          return {
+            ...u.getPublicDetails,
+            lastCommunication: u.lastCommunicationTimestamp
+          }
+        })))
       case '/websocket' :
         if (request.headers.get("Upgrade") != "websocket") {
           return new Response("expected websocket", {status: 400});
