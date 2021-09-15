@@ -1,5 +1,5 @@
 import { uuid } from '@cfworker/uuid';
-import { SocketData } from './ChatRoom';
+import { SocketData, SocketDataTypes } from './ChatRoom';
 
 export default class User {
   id: string;
@@ -8,7 +8,7 @@ export default class User {
   properties: {[key: string]: any}
   socket?: WebSocket | null;
   connected:boolean = false;
-  listeners: {[key: string]: ((data: any, type: string) => void)[]} = {}
+  listeners: {[key: string]: ((data: any, type: SocketDataTypes) => void)[]} = {}
 
   constructor({id=null, suffix=0, name='', properties={}, socket = undefined} : UserData) {
     this.id = id || uuid();
@@ -23,6 +23,7 @@ export default class User {
     this.getPublicDetails = this.getPublicDetails.bind(this)
     this.getPublicProperties = this.getPublicProperties.bind(this)
   }
+
   setSocket(socket?: WebSocket | null) {
     this.socket = socket;
     this.connected = !!socket
@@ -56,12 +57,12 @@ export default class User {
     })
   }
 
-  on(type:string, cb: (data: any, type: string) => void) {
+  on(type:string, cb: (data: any, type: SocketDataTypes) => void) {
     this.listeners[type] = this.listeners[type] || []
     this.listeners[type].push(cb);
   }
 
-  off(type:string, cb: (data: any, type: string) => void) {
+  off(type:string, cb: (data: any, type: SocketDataTypes) => void) {
     this.listeners[type] = (this.listeners[type] || []).filter(v => v !== cb)
   }
 

@@ -22,6 +22,8 @@ export class ChatRoom {
   sessions: User[];
   name?:string;
   incrementValue: number = 1;
+  polls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
+  ephemeralPolls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
 
   constructor(controller: ExpandedDurableObjectState, env: Env) {
     this.storage = controller.storage;
@@ -58,6 +60,15 @@ export class ChatRoom {
   broadcast(message: SocketData | string, data:any = null) {
     this.sessions.forEach(session => session.send(message, data))
   }
+  broadcastToSubscribers(subscription: string, message: SocketData | string, data:any = null) {
+    const parts = `${subscription}`.split(':');
+    const eventType = parts.shift();
+    if (!eventType) {
+      return
+    }
+    const eventId = parts.join(':') || 'all'
+    this.sessions.filter(session => session.properties && session.properties.subscriptions && session.properties.subscriptions[eventType] && (session.properties.subscriptions[eventType][eventId] || session.properties.subscriptions[eventType].all)).forEach(session => session.send(message, data))
+  }
   async handleSession(client: WebSocket, ip?: string) {
     client.accept();
     const suffix = ++this.incrementValue;
@@ -78,6 +89,71 @@ export class ChatRoom {
       console.error('Something went terribly, terribly wrong.', e)
     }
     user.send(config);
+
+    user.on('login', (properties) => {
+      user.properties = properties || {};
+    })
+
+    user.on('subscribe', (channel) => {
+      user.properties = user.properties || {}
+      user.properties.subscriptions = user.properties.subscriptions || {}
+      const parts = `${channel}`.split(':');
+      const eventType = parts.shift();
+      if (!eventType) {
+        return
+      }
+      const eventId = parts.join(':') || 'all'
+      user.properties.subscriptions[eventType] = user.properties.subscriptions[eventType] || {}
+      user.properties.subscriptions[eventType][eventId] = true
+    })
+
+    user.on('unsubscribe', (channel) => {
+      user.properties = user.properties || {}
+      user.properties.subscriptions = user.properties.subscriptions || {}
+      const parts = `${channel}`.split(':');
+      const eventType = parts.shift();
+      if (!eventType) {
+        return
+      }
+      const eventId = parts.join(':') || 'all'
+      if (user.properties.subscriptions[eventType] && eventId === 'all') {
+        delete user.properties.subscriptions[eventType];
+      }
+      else if(user.properties.subscriptions[eventType] && user.properties.subscriptions[eventType][eventId]) {
+        delete user.properties.subscriptions[eventType][eventId];
+      }
+    })
+
+    // Handling both long-lasting and ephemeral polls
+    const onPoll = (poll: any, type: SocketDataTypes) => {
+      const pollsObject = type === 'poll' ? this.polls : this.ephemeralPolls;
+      const {
+        id,
+        answer
+      } = poll
+      pollsObject[id] = pollsObject[id] || {}
+      // Delete previous answers from the same client
+      Object.keys(pollsObject[id]).forEach(ans => {
+        if (typeof pollsObject[id][ans][user.id] !== 'undefined') {
+          delete pollsObject[id][ans][user.id];
+        }
+      })
+      pollsObject[id][answer] = pollsObject[id][answer] || {}
+      pollsObject[id][answer][user.id] = null;
+      const pollResults:SocketData = {
+        type,
+        data: {
+          id,
+          stats: {}
+        }
+      }
+      Object.keys(pollsObject[id]).forEach(ans => pollResults.data.stats[ans] = Object.keys(pollsObject[id][ans]).length)
+      this.broadcastToSubscribers(`${type}:${id}`, pollResults)
+    }
+    user.on('poll', onPoll)
+
+    /* Chat */
+
     user.on('chat', text => {
       const chatMessage:SocketData = {
         type: 'chat',
@@ -86,12 +162,37 @@ export class ChatRoom {
           user: user.getPublicDetails()
         }
       }
-      this.broadcast(chatMessage)
+      this.broadcastToSubscribers('chat', chatMessage)
     })
     user.on('close', () => {
+      /* Clear out ephemeral poll answers */
+      const polls:string[] = []
+      Object.keys(this.ephemeralPolls).forEach(pollId => {
+        Object.keys(this.ephemeralPolls[pollId]).find(ans => {
+          if (typeof this.ephemeralPolls[pollId][ans][user.id] !== 'undefined') {
+            delete this.ephemeralPolls[pollId][ans][user.id];
+            polls.push(pollId)
+            return true;
+          }
+        })
+      })
+      polls.forEach(id => {
+        const pollResults:SocketData = {
+          type: 'ephemeralPoll',
+          data: {
+            id,
+            stats: {}
+          }
+        }
+        Object.keys(this.ephemeralPolls[id]).forEach(ans => pollResults.data.stats[ans] = Object.keys(this.ephemeralPolls[id][ans]).length)
+        this.broadcastToSubscribers(`ephemeralPoll:${id}`, pollResults)
+
+      })
       this.sessions = this.sessions.filter((session) => session !== user);
     })
   }
+
+
 
   async getRoomDetails():Promise<RoomDetails> {
     const details:RoomDetails = {
@@ -111,8 +212,10 @@ export interface RoomDetails {
   config: any;
 }
 
+export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe';
+
 export interface SocketData {
-  type: 'config' | 'chat' | 'poll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close';
+  type: SocketDataTypes;
   data?: any
 }
 
