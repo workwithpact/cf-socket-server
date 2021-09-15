@@ -127,7 +127,7 @@ export class ChatRoom {
       } else if(eventType === 'ephemeralPoll') {
         Object.keys(this.ephemeralPolls).filter(id => id === eventId || eventId === 'all').forEach(id => {
           const pollResults:SocketData = this.generatePollSocketData(id, 'ephemeralPoll');
-          this.broadcastToSubscribers(`poll:${id}`, pollResults)
+          this.broadcastToSubscribers(`ephemeralPoll:${id}`, pollResults)
         })
       }
     })
