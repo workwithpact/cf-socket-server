@@ -62,7 +62,7 @@ export default class User {
     this.pingInterval = setInterval(() => {
       this.send({
         type: "ping",
-        data: true
+        data: (new Date()).getTime()
       })
     }, 25000)
   }
@@ -74,6 +74,9 @@ export default class User {
         this.socket?.close();
       } catch(e) {}
       this.connected = false;
+      if (this.pingInterval) {
+        clearInterval(this.pingInterval);
+      }
     }
     try {
       const callbacks = this.listeners[type] || [];
