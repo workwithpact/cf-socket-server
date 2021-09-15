@@ -169,6 +169,7 @@ export class ChatRoom {
       this.broadcastToSubscribers(`${type}:${id}`, this.generatePollSocketData(id, type))
     }
     user.on('poll', onPoll)
+    user.on('ephemeralPoll', onPoll)
 
     /* Chat */
 
