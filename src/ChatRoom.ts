@@ -48,7 +48,11 @@ export class ChatRoom {
           return new Response("expected websocket", {status: 400});
         }
         let pair = new WebSocketPair();
-        await this.handleSession(pair[1], request);
+        try {
+          await this.handleSession(pair[1], request);
+        } catch(e:any) {
+          console.error('Something went wrong handling the session...', e.message, e.stack)
+        }
         return new Response(null, { status: 101, webSocket: pair[0] });
       default:
         return new Response("Oh, the sadness! This route does not exist.", {
@@ -69,7 +73,11 @@ export class ChatRoom {
     return pollResults
   }
   broadcast(message: SocketData | string, data:any = null) {
-    this.sessions.forEach(session => session.send(message, data))
+    this.sessions.forEach(session => {
+      try {
+        session.send(message, data)
+      } catch(e) { }
+    })
   }
   broadcastToSubscribers(subscription: string, message: SocketData | string, data:any = null) {
     const parts = `${subscription}`.split(':');
@@ -78,7 +86,11 @@ export class ChatRoom {
       return
     }
     const eventId = parts.join(':') || 'all'
-    this.sessions.filter(session => session.properties && session.properties.subscriptions && session.properties.subscriptions[eventType] && (session.properties.subscriptions[eventType][eventId] || session.properties.subscriptions[eventType].all)).forEach(session => session.send(message, data))
+    this.sessions.filter(session => session && session.properties && session.properties.subscriptions && session.properties.subscriptions[eventType] && (session.properties.subscriptions[eventType][eventId] || session.properties.subscriptions[eventType].all)).forEach(session => {
+      try {
+        session.send(message, data)
+      } catch(e) { }
+    })
   }
   async handleSession(client: WebSocket, request?: Request) {
     client.accept();
@@ -237,12 +249,15 @@ export class ChatRoom {
     const details:RoomDetails = {
       id: `${this.controller.id}`,
       name: this.name || '',
-      config: await this.storage.get('config') || '',
+      config: '',
       count: this.sessions.length,
       increment: this.incrementValue,
       pollCount: Object.keys(this.polls).length,
       ephemeralPollCount: Object.keys(this.ephemeralPolls).length
     }
+    try {
+      details.config = await this.storage.get('config') || '';
+    } catch(e) { }
     return details;
   }
 }
