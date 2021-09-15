@@ -26,14 +26,20 @@ body { margin: 0; padding: 0; }
   right:0;
   bottom:0;
   z-index: 15;
-
+}
+#info {
+  position: fixed;
+  top:0;
+  left:0;
+  padding: 12px;
+  background:#FFF;
 }
 </style>
 </head>
 <body>
 <div id="loading">Initiating WebSocket...</div>
 <div id="map"></div>
- 
+ <div id="info">There are currently <span id="userCount">0</span> user(s) active in <span id="locationCount">0</span> location(s).</div>
 <script>
 	mapboxgl.accessToken = 'pk.eyJ1IjoiYWxleHBhY3QiLCJhIjoiY2t0bGtuaG9yMXdrcjJvcWZraGZ4aGh3YSJ9.jTuNOfWZA9HsA4whY358Ng';
   const markers = {};
@@ -63,6 +69,12 @@ body { margin: 0; padding: 0; }
     const updatedLocations = Object.keys(data)
     const previousLocations = Object.keys(markers)
     const markersToRemove = previousLocations.filter(loc => !data[loc])
+    let totalUsers = 0;
+    updatedLocations.forEach(key => totalUsers += data[key] || 0)
+    const totalLocations = updatedLocations.length;
+
+    document.getElementById('userCount').innerText = `${totalUsers}`;
+    document.getElementById('locationCount').innerText = `${totalLocations}`;
     markersToRemove.forEach(loc => {
       markers[loc].marker.remove();
       delete markers[loc];
