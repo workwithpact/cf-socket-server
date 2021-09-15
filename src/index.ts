@@ -5,7 +5,7 @@ export { ChatRoom } from './ChatRoom'
 
 import chatHtml from './demo/chat.html'
 import pollHtml from './demo/poll.html'
-import ephemeralHtml from './demo/poll.html'
+import ephemeralHtml from './demo/ephemeral.html'
 import indexHtml from './demo/index.html'
 
 export default {
