@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style type="text/css">
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+html {
+  height: 100%;
+}
+
+#wrapper {
+  width:90%;
+  max-width:1280px;
+  margin: auto auto;
+  position: relative;
+}
+.section {
+  display: none;
+}
+.section.active {
+  display: block;
+}
+
+</style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <form id="nameChooser" class="section active">
+        <h1>Welcome to Pact's Socket-Server demo!</h1>
+        <p>
+          If you want, try out our <a href="/chat">chat demo</a>.
+        </p>
+
+        <p>
+          Alternatively, you may want to try a <a href="/poll">poll demo</a> instead.
+        </p>
+
+        <p>
+          How about an <a href="/poll"><em>ephemeral</em> poll demo</a>, where answers are remove when a user disconnects...
+        </p>
+        
+      </form>
+    </div>
+  </body>
+</html>

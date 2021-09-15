@@ -5,6 +5,8 @@ export { ChatRoom } from './ChatRoom'
 
 import chatHtml from './demo/chat.html'
 import pollHtml from './demo/poll.html'
+import ephemeralHtml from './demo/poll.html'
+import indexHtml from './demo/index.html'
 
 export default {
   async fetch(request: Request, env: Env) {
@@ -28,6 +30,12 @@ async function handleRequest(request: Request, env: Env) {
       })
     case '/poll':
       return new Response(pollHtml, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        }
+      })
+    case '/ephemeral':
+      return new Response(ephemeralHtml, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8'
         }
