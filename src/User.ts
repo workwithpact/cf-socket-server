@@ -22,6 +22,8 @@ export default class User {
     this.on = this.on.bind(this)
     this.getPublicDetails = this.getPublicDetails.bind(this)
     this.getPublicProperties = this.getPublicProperties.bind(this)
+    this.processIncomingMessage = this.processIncomingMessage.bind(this)
+    this.trigger = this.trigger.bind(this)
   }
 
   setSocket(socket?: WebSocket | null) {
@@ -31,16 +33,9 @@ export default class User {
     socket?.addEventListener('message', (message) => {
       try {
         const parsedMessage = JSON.parse(message.data) as SocketData
-        const type = parsedMessage.type;
-
-        if (type === 'close') {
-          socket.close();
-          return;
-        }
-        const callbacks = this.listeners[type] || [];
-        callbacks.forEach(cb => cb(parsedMessage.data, type));
+        this.processIncomingMessage(parsedMessage);
       } catch(e:any) {
-        socket.send('Something went wrong' + e.message + e.stack)
+        console.error('Something went wrong processing callbacks', e.message, e.stack)
       }
     })
     socket?.addEventListener('close', () => {
@@ -57,6 +52,20 @@ export default class User {
     })
   }
 
+  processIncomingMessage(message: SocketData) {
+    const type = message.type;
+    if (type === 'close') {
+      this.socket?.close();
+      return;
+    }
+    try {
+      const callbacks = this.listeners[type] || [];
+      callbacks.forEach(cb => cb(message.data, type));
+    } catch(e:any) {
+      console.error('Something went wrong processing callbacks', e.message, e.stack)
+    }
+  }
+
   on(type:string, cb: (data: any, type: SocketDataTypes) => void) {
     this.listeners[type] = this.listeners[type] || []
     this.listeners[type].push(cb);
@@ -64,6 +73,15 @@ export default class User {
 
   off(type:string, cb: (data: any, type: SocketDataTypes) => void) {
     this.listeners[type] = (this.listeners[type] || []).filter(v => v !== cb)
+  }
+
+  trigger(message: SocketData | string, data:any = null) {
+    const finalMessage = typeof message === 'string' ? {
+      type: message,
+      data
+    } as SocketData : message
+
+    this.processIncomingMessage(finalMessage)
   }
 
   getPublicDetails():UserData {
