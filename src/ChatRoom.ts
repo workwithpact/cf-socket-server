@@ -164,6 +164,7 @@ export class ChatRoom {
       }
       this.broadcastToSubscribers('chat', chatMessage)
     })
+    
     user.on('close', () => {
       /* Clear out ephemeral poll answers */
       const polls:string[] = []

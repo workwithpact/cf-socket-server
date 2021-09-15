@@ -5,6 +5,7 @@ import { terser } from 'rollup-plugin-terser'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import typescript from '@rollup/plugin-typescript'
+import html from "rollup-plugin-html";
 
 export default {
   input: 'src/index.ts',
@@ -14,5 +15,7 @@ export default {
     file: 'dist/index.mjs',
     sourcemap: true,
   },
-  plugins: [typescript(), commonjs(), nodeResolve({ browser: true }), terser()],
+  plugins: [html({
+    include: "**/*.html",
+  }),typescript(), commonjs(), nodeResolve({ browser: true }), terser()],
 }

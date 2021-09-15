@@ -3,6 +3,8 @@
 export { CounterTs } from './counter'
 export { ChatRoom } from './ChatRoom'
 
+import chatHtml from './demo/chat.html'
+
 export default {
   async fetch(request: Request, env: Env) {
     try {
@@ -16,6 +18,14 @@ export default {
 async function handleRequest(request: Request, env: Env) {
   const url:URL = new URL(request.url);
   const params:URLSearchParams = new URLSearchParams(url.search);
+  switch(url.pathname) {
+    case '/chat':
+      return new Response(chatHtml, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        }
+      })
+  }
   const room:string = params.get('room') || 'default';
   const chatRoomId = env.CHATROOM.idFromName(room);
   const chatRoom = await env.CHATROOM.get(chatRoomId);

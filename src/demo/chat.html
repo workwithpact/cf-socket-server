@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style type="text/css">
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+html {
+  height: 100%;
+}
+
+#wrapper {
+  width:90%;
+  max-width:1280px;
+  margin: auto auto;
+  position: relative;
+}
+.section {
+  display: none;
+}
+.section.active {
+  display: block;
+}
+
+input#username{ 
+  border: none;
+  border-bottom: 1px solid #000;
+}
+
+#loading {
+  text-align: center;
+  margin: 15%;
+  font-size: 32px;
+}
+#loading + #wrapper {
+  display: none;
+}
+
+#chat {
+  display: none;
+  height: 80vh;
+  flex-direction: column;
+}
+#chat.active {
+  display: flex;
+}
+#chatlog {
+  width: 100%;
+  flex-grow: 1000;
+}
+#messageform {
+  display: flex;
+}
+#message{
+  flex-grow: 1000;
+  font-size: 20px;
+  border: none;
+  border-bottom: 1px solid #000;
+  padding: 5px;
+}
+.message {
+}
+.message__user {
+  font-weight: bold;
+  display: inline-block;
+  margin-right: 5px;
+}
+.message__user::after{
+  content: ':'
+}
+.message__text {
+  display: inline-block;
+}
+</style>
+  </head>
+  <body>
+    <div id="loading">Initiating WebSocket...</div>
+    <div id="wrapper">
+      <form id="nameChooser" class="section active">
+        <h1>Welcome to Pact's Chat App Demo!</h1>
+        <h2>First, tell me your name.</h2>
+        <label>Your name is <input type="text" required min=3 max=32 id="username" /></label><button type="submit">Join Chat</button>
+      </form>
+      <div id="chat" class="section">
+        <div id="chatlog"></div>
+        <form id="messageform">
+          <input type="text" id="message" placeholder="Type your message here" required min=3 max=140/><button type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </body>
+
+<!--===================================================================================-->
+<!-- Client-side JavaScript code for the app. -->
+
+<script type="text/javascript">
+(function() {
+  let usernameForm = document.getElementById('nameChooser');
+  let usernameInput = document.getElementById('username');
+  let chat = document.getElementById('chat');
+  let logs = document.getElementById('chatlog');
+  let messageForm = document.getElementById('messageform');
+  let messageInput = document.getElementById('message');
+
+  let currentWebSocket = null;
+  let send = (type, data) => {
+    currentWebSocket.send(JSON.stringify({
+      type,
+      data
+    }))
+  }
+  let hostname = window.location.host
+  let params = new URLSearchParams(window.location.search)
+  let room = params.get('room') || 'demo';
+  if (!hostname || hostname.indexOf('.workers.dev') === -1) {
+    hostname = 'socket-server.213a.workers.dev';
+  }
+  currentWebSocket = new WebSocket(`wss://${hostname}/websocket?room=${encodeURIComponent(room)}`)
+  currentWebSocket.addEventListener('open', () => {
+    document.getElementById('loading').remove()
+  });
+
+  currentWebSocket.addEventListener('message', (msg => {
+    console.log('message!', msg.data)
+    const data = JSON.parse(msg.data);
+    console.log({data})
+    if (data && data.type === 'chat') {
+      let messageHolder = document.createElement('div')
+      let userHolder = document.createElement('div')
+      let messageContentHolder = document.createElement('div')
+      messageHolder.classList.add('message')
+      userHolder.classList.add('message__user')
+      messageContentHolder.classList.add('message__text')
+      let user = (data && data.data && data.data.user) || null
+      let username = (user && user.properties && user.properties.name) || 'anonymous'
+      userHolder.innerText = `${username}${user && user.suffix ? `#${user.suffix}` : ''}`
+      messageContentHolder.innerText = data.data.message
+      messageHolder.appendChild(userHolder)
+      messageHolder.appendChild(messageContentHolder)
+      logs.appendChild(messageHolder)
+    }
+  }))
+
+  usernameForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    send('login', {
+      name: usernameInput.value
+    });
+    send('subscribe', 'chat');
+    usernameForm.classList.remove('active')
+    chat.classList.add('active')
+  })
+
+  messageForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    send('chat', messageInput.value);
+    messageInput.value = "";
+  })
+
+  return;
+})()
+
+</script>
+<!--===================================================================================-->
+</html>
