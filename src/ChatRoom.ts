@@ -181,6 +181,9 @@ export class ChatRoom {
       Object.keys(pollsObject[id]).forEach(ans => {
         if (typeof pollsObject[id][ans][user.id] !== 'undefined') {
           delete pollsObject[id][ans][user.id];
+          if (Object.keys(pollsObject[id][ans]).length === 0) {
+            delete pollsObject[id][ans];
+          }
         }
       })
       pollsObject[id][answer] = pollsObject[id][answer] || {};
@@ -211,6 +214,9 @@ export class ChatRoom {
         Object.keys(this.ephemeralPolls[pollId]).find(ans => {
           if (typeof this.ephemeralPolls[pollId][ans][user.id] !== 'undefined') {
             delete this.ephemeralPolls[pollId][ans][user.id];
+            if (Object.keys(this.ephemeralPolls[pollId][ans]).length === 0) {
+              delete this.ephemeralPolls[pollId][ans];
+            }
             polls.push(pollId)
             return true;
           }
