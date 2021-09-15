@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Live Map</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.js"></script>
+<style>
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+#loading {
+  text-align: center;
+  padding: 15%;
+  font-size: 32px;
+  background:#FFF;
+  position: absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index: 15;
+
+}
+</style>
+</head>
+<body>
+<div id="loading">Initiating WebSocket...</div>
+<div id="map"></div>
+ 
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoiYWxleHBhY3QiLCJhIjoiY2t0bGtuaG9yMXdrcjJvcWZraGZ4aGh3YSJ9.jTuNOfWZA9HsA4whY358Ng';
+  const markers = {};
+  let hostname = window.location.host
+  let params = new URLSearchParams(window.location.search)
+  let room = params.get('room') || 'demo';
+  if (!hostname || hostname.indexOf('.workers.dev') === -1) {
+    hostname = 'socket-server.213a.workers.dev';
+  }
+  let currentWebSocket = null;
+  let mapLoaded = false;
+  let send = (type, data) => {
+    currentWebSocket.send(JSON.stringify({
+      type,
+      data
+    }))
+  }
+
+  const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/dark-v10',
+      center: [-103.5917, 40.6699],
+      zoom: 3
+  });
+
+  const updatePins = (data) => {
+    const updatedLocations = Object.keys(data)
+    const previousLocations = Object.keys(markers)
+    const markersToRemove = previousLocations.filter(loc => !data[loc])
+    markersToRemove.forEach(loc => {
+      markers[loc].marker.remove();
+      delete markers[loc];
+    })
+    updatedLocations.forEach(loc => {
+      const parts = loc.split(',')
+      const lng = parts.shift();
+      const lat = parts.shift();
+      if (!markers[loc]) {
+        markers[loc] = {
+          marker: new mapboxgl.Marker().setLngLat([lat * 1, lng * 1])
+        }
+        markers[loc].marker.addTo(map)
+      }
+    })
+  }
+
+  map.on('load', () => {
+    currentWebSocket = new WebSocket(`wss://${hostname}/websocket?room=${encodeURIComponent(room)}`)
+    currentWebSocket.addEventListener('open', () => {
+      document.getElementById('loading').remove()
+      send('subscribe', 'ephemeralPoll:liveMap')
+    });
+    currentWebSocket.addEventListener('message', msg => {
+      const data = JSON.parse(msg.data);
+      switch(data.type) {
+        case 'profile': 
+          send('ephemeralPoll', {
+            id: 'liveMap',
+            answer: `${data.data.connectionDetails.latitude},${data.data.connectionDetails.longitude}`
+          })
+          break;
+        case 'ephemeralPoll':
+          if (data.data.id === 'liveMap') {
+            updatePins(data.data.stats)
+          }
+          break;
+      }
+    })
+  })
+  
+  
+</script>
+ 
+</body>
+</html>

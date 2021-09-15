@@ -6,6 +6,7 @@ export { ChatRoom } from './ChatRoom'
 import chatHtml from './demo/chat.html'
 import pollHtml from './demo/poll.html'
 import ephemeralHtml from './demo/ephemeral.html'
+import livemapDemo from './demo/livemap.html'
 import indexHtml from './demo/index.html'
 
 export default {
@@ -24,6 +25,12 @@ async function handleRequest(request: Request, env: Env) {
   switch(url.pathname) {
     case '/':
       return new Response(indexHtml, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        }
+      })
+    case '/livemap':
+      return new Response(livemapDemo, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8'
         }
