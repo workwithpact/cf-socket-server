@@ -212,7 +212,10 @@ export class ChatRoom {
       id: `${this.controller.id}`,
       name: this.name || '',
       config: await this.storage.get('config') || '',
-      count: this.sessions.length
+      count: this.sessions.length,
+      increment: this.incrementValue,
+      pollCount: Object.keys(this.polls).length,
+      ephemeralPollCount: Object.keys(this.ephemeralPolls).length
     }
     return details;
   }
@@ -223,6 +226,9 @@ export interface RoomDetails {
   name: string;
   count: number;
   config: any;
+  increment: number;
+  pollCount: number;
+  ephemeralPollCount: number;
 }
 
 export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe';
