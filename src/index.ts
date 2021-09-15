@@ -4,6 +4,7 @@ export { CounterTs } from './counter'
 export { ChatRoom } from './ChatRoom'
 
 import chatHtml from './demo/chat.html'
+import pollHtml from './demo/poll.html'
 
 export default {
   async fetch(request: Request, env: Env) {
@@ -21,6 +22,12 @@ async function handleRequest(request: Request, env: Env) {
   switch(url.pathname) {
     case '/chat':
       return new Response(chatHtml, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        }
+      })
+    case '/poll':
+      return new Response(pollHtml, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8'
         }
