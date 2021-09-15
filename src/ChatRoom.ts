@@ -47,9 +47,8 @@ export class ChatRoom {
         if (request.headers.get("Upgrade") != "websocket") {
           return new Response("expected websocket", {status: 400});
         }
-        let ip = request.headers.get("CF-Connecting-IP");
         let pair = new WebSocketPair();
-        await this.handleSession(pair[1], ip || undefined);
+        await this.handleSession(pair[1], request);
         return new Response(null, { status: 101, webSocket: pair[0] });
       default:
         return new Response("Oh, the sadness! This route does not exist.", {
@@ -81,12 +80,13 @@ export class ChatRoom {
     const eventId = parts.join(':') || 'all'
     this.sessions.filter(session => session.properties && session.properties.subscriptions && session.properties.subscriptions[eventType] && (session.properties.subscriptions[eventType][eventId] || session.properties.subscriptions[eventType].all)).forEach(session => session.send(message, data))
   }
-  async handleSession(client: WebSocket, ip?: string) {
+  async handleSession(client: WebSocket, request?: Request) {
     client.accept();
     const suffix = ++this.incrementValue;
     const user:User = new User({
       suffix,
       socket: client,
+      connectionDetails: request?.cf
     })
     this.sessions.push(user);
 
@@ -100,8 +100,12 @@ export class ChatRoom {
     } catch(e) {
       console.error('Something went terribly, terribly wrong.', e)
     }
+    const profile:SocketData = {
+      type: 'profile',
+      data: user.getPrivateDetails()
+    }
+    user.send(profile);
     user.send(config);
-
     user.on('login', (properties) => {
       user.properties = properties || {};
     })
@@ -231,7 +235,7 @@ export interface RoomDetails {
   ephemeralPollCount: number;
 }
 
-export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe';
+export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile';
 
 export interface SocketData {
   type: SocketDataTypes;

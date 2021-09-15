@@ -6,15 +6,17 @@ export default class User {
   suffix: number;
   name?: string;
   properties: {[key: string]: any}
+  connectionDetails: {[key: string]: any}
   socket?: WebSocket | null;
   connected:boolean = false;
   listeners: {[key: string]: ((data: any, type: SocketDataTypes) => void)[]} = {}
 
-  constructor({id=null, suffix=0, name='', properties={}, socket = undefined} : UserData) {
+  constructor({id=null, suffix=0, name='', properties={}, connectionDetails={}, socket = undefined} : UserData) {
     this.id = id || uuid();
     this.suffix = suffix || 0
     this.name = name || ''
     this.properties = properties || {}
+    this.connectionDetails = connectionDetails || {}
     this.setSocket(socket)
 
     this.send = this.send.bind(this)
@@ -98,6 +100,16 @@ export default class User {
     return publicProperties;
   }
 
+  getPrivateDetails():UserData {
+    return {
+      name: this.name,
+      suffix: this.suffix,
+      properties: this.properties,
+      id: this.id,
+      connectionDetails: this.connectionDetails
+    }
+  }
+
   send(message: SocketData | string, data:any = null) {
     try {
       const finalMessage = typeof message === 'string' ? {
@@ -120,5 +132,6 @@ export interface UserData {
   suffix?: number | null;
   name?: string | null;
   properties?: {[key: string]: any} | null;
+  connectionDetails?: {[key: string]: any} | null;
   socket?: WebSocket | null;
 }
