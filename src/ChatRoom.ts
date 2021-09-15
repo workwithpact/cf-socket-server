@@ -46,7 +46,7 @@ export class ChatRoom {
       case '/users':
         return new Response(JSON.stringify(this.sessions.map(u => {
           return {
-            ...u.getPublicDetails,
+            ...u.getPublicDetails(),
             lastCommunication: u.lastCommunicationTimestamp
           }
         })))
