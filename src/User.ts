@@ -76,7 +76,7 @@ export default class User {
 
   getPublicProperties(): {[key: string]: any} {
     const publicProperties:{[key: string]: any} = {}
-    Object.keys(this.properties || {}).filter(v => v.indexOf('_') !== 0).forEach(k => publicProperties[k] = this.properties[k])
+    Object.keys(this.properties || {}).filter(v => v.indexOf('_') !== 0 && v !== 'subscriptions').forEach(k => publicProperties[k] = this.properties[k])
     return publicProperties;
   }
 
