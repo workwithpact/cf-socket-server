@@ -100,14 +100,30 @@ export class ChatRoom {
     } catch(e) {
       console.error('Something went terribly, terribly wrong.', e)
     }
+
+    user.send(config);
+
     const profile:SocketData = {
       type: 'profile',
       data: user.getPrivateDetails()
     }
     user.send(profile);
-    user.send(config);
+
     user.on('login', (properties) => {
       user.properties = properties || {};
+      const profile:SocketData = {
+        type: 'profile',
+        data: user.getPrivateDetails()
+      }
+      user.send(profile);
+    })
+
+    user.on('profile', (properties) => {
+      const profile:SocketData = {
+        type: 'profile',
+        data: user.getPrivateDetails()
+      }
+      user.send(profile);
     })
 
     user.on('subscribe', (channel) => {
