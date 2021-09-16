@@ -166,6 +166,7 @@ export class ChatRoom {
       const utcNow = new Date( now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds() );
       const diff = Math.abs((ts*1) - utcNow.getTime())
       if (diff > 60*5*1000) {
+        user.send('error', "Wrong timestamp. Received " + ts + " but now is " + now.getTime() + " Diff is " + diff)
         return; // Outdated.
       }
       const unencodedKey = new TextEncoder().encode(`${this.name}${ts}${this.signingKey}`)
