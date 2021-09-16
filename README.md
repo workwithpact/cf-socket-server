@@ -328,3 +328,45 @@ Due to the underlying storage engine, the configuration can only be a string. No
   "data": "{}"
 }
 ```
+
+### [Advanced use case!] relaying messages to the admin: `relay`
+Maybe you'd like to create your own logic for specific (made up!) event types? 
+As an example, if you were to create a tic-tac-toe game and wanted a middleware to validate moves before broadcasting them, ensuring it is the player's turn, you could do that.
+
+Or let's say you are building a chat and want to allow users to "report" users to an admin, without the information being seen by anyone other than the admin... you could do that, too.
+
+Mix that with the `broadcast` call, and you've got yourself a middleware!
+
+Example: subscribing to the `report` event:
+```json
+{
+  "type": "relay",
+  "data": "report"
+}
+```
+
+Now, whenever a user issues a `report` event, you will receive a payload containing the type, data and the user that submitted the event, along with all information associated with the user, including private properties (this starting with `_`):
+```json
+{
+  "type":"relay:report",
+  "data": {
+    "type": "report",
+    "data": "data sent by the user. This could be a object, an array, a number, null... whatever you want it to be.",
+    "user": {
+      "id":"...",
+      "properties":"...",
+      ...
+    }
+  }
+}
+```
+
+### [Advanced use case!] turning off a relay: `deleteRelay`
+Just like you can subscribe to receive relayed events, you can also delete those relays:
+
+```json
+{
+  "type": "deleteRelay",
+  "data": "someEvent"
+}
+```
