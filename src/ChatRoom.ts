@@ -67,12 +67,19 @@ export class ChatRoom {
           return new Response("expected websocket", {status: 400});
         }
         let pair = new WebSocketPair();
+        let user:User|null = null;
         try {
-          await this.handleSession(pair[1], request);
+          user = await this.handleSession(pair[1], request);
         } catch(e:any) {
           console.error('Something went wrong handling the session...', e.message, e.stack)
         }
-        return new Response(null, { status: 101, webSocket: pair[0] });
+        const headers:{[key: string]:string} = {
+          'X-Socket-Server': 'Pact Studio <workwithpact.com>'
+        };
+        if (user && user.id) {
+          headers['Set-Cookie'] = `${this.controller.id}_session=${user && user.id}`
+        }
+        return new Response(null, { status: 101, webSocket: pair[0], headers });
       default:
         return new Response("Oh, the sadness! This route does not exist.", {
           status: 404
@@ -377,6 +384,7 @@ export class ChatRoom {
       })
       client.close();
     })
+    return user;
   }
 
 
