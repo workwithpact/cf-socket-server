@@ -18,7 +18,7 @@ Simply create a new WebSocket connection to `wss://sockets.workwithpact.com/webs
 ### Setting profile properties: `login`
 Sending a `login` payload allows you to attach properties to your user session. Properties that start with a `_` are considered private; They are not sent out to anyone other than yourself, through a `profile` response.
 After sending a `login` payload, you can expect a `profile` response from the server.
-```
+```json
 {
   "type": "login",
   "data": {...} 
@@ -27,14 +27,14 @@ After sending a `login` payload, you can expect a `profile` response from the se
 
 ### Getting your profile: `profile`
 If you send a `profile` request:
-```
+```json
 {
   "type": "profile"
 }
 ```
 
 The server will send back a `profile` response containing your user profile, ex:
-```
+```json
 {
   "type": "profile",
   "data": {
@@ -55,7 +55,7 @@ When subscribing, you may add a specific identifier to subscribe to. For example
 You can do so by adding `:id_here` after the event name, ex: `poll:id_here`.
 
 Subscribe to a specific counter:
-```
+```json
 {
   "type": "subscribe",
   "data": "counter:order_confirmation_subtotal"
@@ -63,7 +63,7 @@ Subscribe to a specific counter:
 ```
 
 Subscribe to chat:
-```
+```json
 {
   "type": "subscribe",
   "data": "chat"
@@ -71,7 +71,7 @@ Subscribe to chat:
 ```
 
 Subscribe to all polls:
-```
+```json
 {
   "type": "subscribe",
   "data": "poll"
@@ -83,7 +83,7 @@ Similarly to subscriptions, you may unsubscribe from events.
 It follows the same logic. If you send an unsubscribe payload without an id, all events of the type are unsubscribed.
 
 Unsubscribe from a specific counter:
-```
+```json
 {
   "type": "unsubscribe",
   "data": "counter:order_confirmation_subtotal"
@@ -91,7 +91,7 @@ Unsubscribe from a specific counter:
 ```
 
 Unsubscribe from chat:
-```
+```json
 {
   "type": "unsubscribe",
   "data": "chat"
@@ -99,7 +99,7 @@ Unsubscribe from chat:
 ```
 
 Unsubscribe from all polls:
-```
+```json
 {
   "type": "unsubscribe",
   "data": "poll"
@@ -110,7 +110,7 @@ Unsubscribe from all polls:
 You may send out chat mesasges to users, as well as receive messages (once you've subscribed to the `chat` event).
 
 Sending a chat message:
-```
+```json
 {
   "type": "chat",
   "data": "Chat message goes here :)"
@@ -118,7 +118,7 @@ Sending a chat message:
 ```
 
 When you are subscribed to the `chat` event, whenever a message is broadcast by a user, you will receive a `chat` payload:
-```
+```json
 {
   "type": "chat",
   "data": {
@@ -138,7 +138,7 @@ You may cast any vote onto any poll. Polls are automatically created if they do 
 Upon a vote being cast, anyone registering to the poll's id (or to the generic `poll` event) will receive poll statistics.
 
 Casting a vote of "hello" on poll id "test poll"
-```
+```json
 {
   "type": "poll",
   "data": {
@@ -149,7 +149,7 @@ Casting a vote of "hello" on poll id "test poll"
 ```
 
 Data received after a vote has been cast, broadcast to all subscribers.
-```
+```json
 {
   "type": "poll",
   "data": {
@@ -171,7 +171,7 @@ You may increment or decrement any counter's value. Similarly to polls, if a cou
 
 Incrementing counter id "order_subtotals" by 17.75:
 
-```
+```json
 {
   "type": "counter",
   "data": {
@@ -182,7 +182,7 @@ Incrementing counter id "order_subtotals" by 17.75:
 ```
 Decrementing counter id "order_subtotals" by 15.14:
 
-```
+```json
 {
   "type": "counter",
   "data": {
@@ -193,7 +193,7 @@ Decrementing counter id "order_subtotals" by 15.14:
 ```
 
 When someone subscribes to a `counter` event, the server will send out the following payload every time the counter's value changes:
-```
+```json
 {
   "type": "counter",
   "data": {
@@ -208,7 +208,7 @@ Upon connecting, and whenever the server's configuration changes, the server wil
 The config is a string; Each config is different per room, and depends on what the intended use case of the application is.
 
 Example payload:
-```
+```json
 {
   "type": "config",
   "data": "{}"
@@ -219,7 +219,7 @@ Example payload:
 Some rooms may send out a `broadcast` event. 
 
 Example payload:
-```
+```json
 {
   "type": "broadcast",
   "data": {
@@ -229,5 +229,104 @@ Example payload:
 }
 ```
 
-### Emitting broadcasts as the server: TODO
-### Changing the room's configuration: TODO
+### User roles: `authenticate`
+By default, users inherit the `user` role.
+You can change to an `admin` role by calling `authenticate` and passing along the current (UTC) timestamp and the SHA-256 hexadecimal hash of `{ROOMNAME}{TIMESTAMP_IN_MILISECONDS}{SIGNING_KEY}`.
+
+For example, for the room `testRoom`, the timestamp `1631756233699` and the signing key `deadbeef`, you would need to compute the SHA-256 value of `testRoom1631756233699deadbeef` (which is: `89d88bb54565ea81c0d31c817eddba48c2fbbb0414fb4bb87c799bb2e824804a`).
+Once computed, send out the following payload:
+```json
+{
+  "type": "authenticate",
+  "data": {
+    "ts": "1631756233699",
+    "key": "89d88bb54565ea81c0d31c817eddba48c2fbbb0414fb4bb87c799bb2e824804a"
+  }
+}
+```
+
+Upon success, the server will send out a `profile` payload containing `"role": "admin"`.
+
+Here's a sample Javascript implementation (relying on web crypto). Do note that the server won't honor authentication requests with a timestamp more than 5 minutes into the future or into the past.
+```js
+const roomName = 'testRoom';
+const signingKey = 'deadbeef';
+
+const now = new Date();
+const utcNow = new Date( now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds() );
+
+const plaintextKey = new TextEncoder().encode(`${roomName}${utcNow.getTime()}${signingKey}`)
+
+const digest = await crypto.subtle.digest(
+  {
+    name: "SHA-256",
+  },
+  plaintextKey
+);
+const authenticationKey = [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('');
+
+
+console.log('The authentication key is', authenticationKey, 'and the payload should be', {
+  type: 'authenticate',
+  data: {
+    ts: utcNow.getTime(),
+    key: authenticationKey
+  }
+})
+```
+
+### Emitting broadcasts as the server: `broadcast`
+Once successfully connected to the server as an admin through the `authenticate` call, you will be able to send out broadcast messages as the server.
+
+Using the `broadcast` call, you can essentially simulate any payload type. You can even come up with your own if you choose to.
+
+Example payload:
+```json
+{
+  "type": "broadcast",
+  "data": {
+    "type": "whatsup",
+    "data": [
+      1,
+      2,
+      "abc"
+    ]
+  }
+}
+```
+
+Users will receive:
+```json
+{
+  "type": "whatsup",
+  "data": [
+    1,
+    2,
+    "abc"
+  ]
+}
+```
+
+Note that you can also target the broadcast messages to users subscribing to specific events by adding a `to` property. The following example will broadcast messages to users subscribing to the "weather" event:
+```json
+{
+  "type": "broadcast",
+  "data": {
+    "to": "weather",
+    "type": "weather_forecast",
+    "data": "Cloudy with a chance of meatballs"
+  }
+}
+```
+
+### Changing the room's configuration
+Once successfully connected to the server as an admin through the `authenticate` call, you will be able to update the server's configuration. Updates to the configuration are saved in the underlying durable object storage, and sent out to every user upon changes and upon connecting.
+
+Due to the underlying storage engine, the configuration can only be a string. Nothing stops you from `JSON.stringify`ing it beforehand though.
+
+```json
+{
+  "type": "config",
+  "data": "{}"
+}
+```
