@@ -94,6 +94,8 @@ export default class User {
     try {
       const callbacks = this.listeners[type] || [];
       callbacks.forEach(cb => cb(message.data, type));
+      const wildcardCallbacks = this.listeners['*'] || [];
+      wildcardCallbacks.forEach(cb => cb(message.data, type));
     } catch(e:any) {
       console.error('Something went wrong processing callbacks', e.message, e.stack)
     }

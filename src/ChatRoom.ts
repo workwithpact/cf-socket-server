@@ -28,6 +28,7 @@ export class ChatRoom {
   ephemeralPolls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
   signingKey?: string;
   config: string = '';
+  relays: {[key: string]:User[]} = {}
 
   constructor(controller: ExpandedDurableObjectState, env: Env) {
     this.storage = controller.storage;
@@ -178,6 +179,33 @@ export class ChatRoom {
       if (`${key.toLowerCase()}` === hex) {
         user.setRole('admin');
         user.trigger('profile')
+      }
+    })
+
+    user.on('*', (data, type) => {
+      (this.relays[type] || []).forEach(u => u.send(`relay:${type}`, {
+        data,
+        user: user.getPrivateDetails()
+      }));
+    })
+
+    user.on('relay', (type) => {
+      if (user.role !== 'admin') {
+        return;
+      }
+      this.relays[type] = this.relays[type] || []
+      if (this.relays[type].indexOf(user) === -1) {
+        this.relays[type].push(user)
+      }
+    })
+
+    user.on('deleteRelay', type => {
+      Object.keys(this.relays).filter(k => !type || k === type).forEach(k => this.relays[k] = this.relays[k].filter(u => u !== user))
+      if(!type) {
+        this.relays = {};
+      }
+      if (this.relays[type]) {
+        delete this.relays[type];
       }
     })
 
@@ -341,6 +369,10 @@ export class ChatRoom {
 
       })
       this.sessions = this.sessions.filter((session) => session !== user)
+      /* Clean up relays*/
+      Object.keys(this.relays).forEach(k => {
+        this.relays[k] = this.relays[k].filter(u => u !== user)
+      })
       client.close();
     })
   }
@@ -371,7 +403,7 @@ export interface RoomDetails {
   ephemeralPollCount: number;
 }
 
-export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile' | 'ping' | 'counter' | 'error';
+export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile' | 'ping' | 'counter' | 'error' | 'relay' | 'deleteRelay' | '*';
 
 export interface SocketData {
   type: SocketDataTypes;
