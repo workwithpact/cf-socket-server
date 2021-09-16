@@ -13,11 +13,11 @@
 - - [Incrementing (or decrementing) a counter](#incrementing-or-decrementing-a-counter-counter)
 - - [Receving server configuration changes](#receving-server-configuration-changes-config)
 - - [Receving server broadcasts](#receving-server-broadcasts-broadcast)
-- - 🔒 [User roles & Authentication](#user-roles-authenticate)
-- - 🔒 [Emitting custom events](#user-roles-authenticate)
-- - 🔒 [Changing the room's configuration](#user-roles-authenticate)
-- - 🔒 [Advanced use case: Relaying events](#)
-- - 🔒 [Advanced use case: Deleting relays](#)
+- - 🔒 [User roles & Authentication](#-user-roles-authenticate)
+- - 🔒 [Emitting custom events](#-emitting-custom-events-broadcast)
+- - 🔒 [Changing the room's configuration](#-changing-the-rooms-configuration)
+- - 🔒 [Advanced use case: Relaying events](#-advanced-use-case-relaying-messages-to-the-admin-relay)
+- - 🔒 [Advanced use case: Deleting relays](#-advanced-use-case-turning-off-a-relay-deleterelay)
 
 
 ## What is this?
