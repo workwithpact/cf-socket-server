@@ -20,7 +20,7 @@ export class ChatRoom {
   storage: DurableObjectStorage;
   controller: ExpandedDurableObjectState;
   env: Env;
-  sessions: User[];
+  sessions: {[key: string]: User[]} = {};
   name?:string;
   incrementValue: number = 1;
   counters:{[key: string]: number} = {};
@@ -34,7 +34,7 @@ export class ChatRoom {
     this.storage = controller.storage;
     this.controller = controller;
     this.env = env;
-    this.sessions = []
+    this.sessions = {}
     this.signingKey = env.ADMIN_SIGNING_KEY;
     controller.blockConcurrencyWhile(async () => {
       let stored:string | null | undefined = await this.storage.get("config");
@@ -86,6 +86,26 @@ export class ChatRoom {
         })
     }
   }
+  removeUser(user: User) {
+    if (!user || !user.id || !this.sessions[user.id]){
+      return;
+    }
+    this.sessions[user.id] = this.sessions[user.id].filter(v => v !== user);
+    if (!this.sessions[user.id].length) {
+      delete this.sessions[user.id];
+    }
+  }
+  addUser(user: User) {
+    this.sessions[user.id] = this.sessions[user.id] || [];
+    if (this.sessions[user.id].indexOf(user) === -1) {
+      this.sessions[user.id].push(user);
+    }
+  }
+  getAllSessions():User[] {
+    const sessions: User[] = [];
+    Object.keys(this.sessions).forEach(k => this.sessions[k].forEach(u => sessions.push(u)))
+    return sessions;
+  }
   generatePollSocketData(id:string, type:SocketDataTypes = 'poll'):SocketData {
     const pollObject = type === 'poll' ? this.polls : this.ephemeralPolls;
     const pollResults:SocketData = {
@@ -99,7 +119,7 @@ export class ChatRoom {
     return pollResults
   }
   broadcast(message: SocketData | string, data:any = null) {
-    this.sessions.forEach(session => {
+    this.getAllSessions().forEach(session => {
       try {
         session.send(message, data)
       } catch(e) { }
@@ -112,7 +132,7 @@ export class ChatRoom {
       return
     }
     const eventId = parts.join(':') || 'all'
-    this.sessions.filter(session => session && session.properties && session.properties.subscriptions && session.properties.subscriptions[eventType] && (session.properties.subscriptions[eventType][eventId] || session.properties.subscriptions[eventType].all)).forEach(session => {
+    this.getAllSessions().filter(session => session && session.properties && session.properties.subscriptions && session.properties.subscriptions[eventType] && (session.properties.subscriptions[eventType][eventId] || session.properties.subscriptions[eventType].all)).forEach(session => {
       try {
         session.send(message, data)
       } catch(e) { }
@@ -126,7 +146,7 @@ export class ChatRoom {
       socket: client,
       connectionDetails: request?.cf
     })
-    this.sessions.push(user);
+    this.addUser(user)
 
     const config:SocketData = {
       type: "config",
@@ -377,7 +397,7 @@ export class ChatRoom {
         this.broadcastToSubscribers(`ephemeralPoll:${id}`, pollResults)
 
       })
-      this.sessions = this.sessions.filter((session) => session !== user)
+      this.removeUser(user);
       /* Clean up relays*/
       Object.keys(this.relays).forEach(k => {
         this.relays[k] = this.relays[k].filter(u => u !== user)
@@ -393,7 +413,8 @@ export class ChatRoom {
     const details:RoomDetails = {
       id: `${this.controller.id}`,
       name: this.name || '',
-      count: this.sessions.length,
+      count: this.getAllSessions().length,
+      uniqueCount: Object.keys(this.sessions).length,
       increment: this.incrementValue,
       pollCount: Object.keys(this.polls).length,
       config: this.config,
@@ -407,6 +428,7 @@ export interface RoomDetails {
   id: string;
   name: string;
   count: number;
+  uniqueCount: number;
   config: any;
   increment: number;
   pollCount: number;
