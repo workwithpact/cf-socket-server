@@ -185,6 +185,7 @@ export class ChatRoom {
 
     user.on('*', (data, type) => {
       (this.relays[type] || []).forEach(u => u.send(`relay:${type}`, {
+        type,
         data,
         user: user.getPrivateDetails()
       }));
