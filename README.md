@@ -1,4 +1,4 @@
-# Pact's Socket Server
+# Pact's Realtime Project Swiss Army Knife 🛠️
 
 - [What is this?](#what-is-this)
 - [How do I use this?](#how-do-i-use-this)
