@@ -59,7 +59,8 @@ async function handleRequest(request: Request, env: Env) {
   return await chatRoom.fetch(request);
 }
 
-interface Env {
+export interface Env {
   COUNTER: DurableObjectNamespace,
-  CHATROOM: DurableObjectNamespace
+  CHATROOM: DurableObjectNamespace,
+  ADMIN_SIGNING_KEY: string
 }

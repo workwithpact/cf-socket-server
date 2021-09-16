@@ -12,6 +12,7 @@ export default class User {
   listeners: {[key: string]: ((data: any, type: SocketDataTypes) => void)[]} = {};
   pingInterval?: number;
   lastCommunicationTimestamp?:number;
+  role: 'user' | 'admin' = 'user'
 
   constructor({id=null, suffix=0, name='', properties={}, connectionDetails={}, socket = undefined} : UserData) {
     this.id = id || uuid();
@@ -28,6 +29,10 @@ export default class User {
     this.getPublicProperties = this.getPublicProperties.bind(this)
     this.processIncomingMessage = this.processIncomingMessage.bind(this)
     this.trigger = this.trigger.bind(this)
+  }
+
+  setRole(newRole:'user' | 'admin') {
+    this.role = newRole;
   }
 
   setSocket(socket?: WebSocket | null) {
@@ -135,7 +140,8 @@ export default class User {
       suffix: this.suffix,
       properties: this.properties,
       id: this.id,
-      connectionDetails: this.connectionDetails
+      connectionDetails: this.connectionDetails,
+      role: this.role
     }
   }
 
@@ -165,4 +171,5 @@ export interface UserData {
   properties?: {[key: string]: any} | null;
   connectionDetails?: {[key: string]: any} | null;
   socket?: WebSocket | null;
+  role?: 'user' | 'admin'
 }

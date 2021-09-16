@@ -14,6 +14,7 @@ declare global {
 }
 
 import User from './User'
+import { Env } from './index'
 
 export class ChatRoom {
   storage: DurableObjectStorage;
@@ -25,12 +26,19 @@ export class ChatRoom {
   counters:{[key: string]: number} = {};
   polls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
   ephemeralPolls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
+  signingKey?: string;
+  config: string = '';
 
   constructor(controller: ExpandedDurableObjectState, env: Env) {
     this.storage = controller.storage;
     this.controller = controller;
     this.env = env;
     this.sessions = []
+    this.signingKey = env.ADMIN_SIGNING_KEY;
+    controller.blockConcurrencyWhile(async () => {
+      let stored:string | null | undefined = await this.storage.get("config");
+      this.config = stored || '';
+  })
   }
 
   // The system will call fetch() whenever an HTTP request is sent to this Object. Such requests
@@ -140,12 +148,67 @@ export class ChatRoom {
       user.send(profile);
     })
 
-    user.on('profile', (properties) => {
+    user.on('profile', () => {
       const profile:SocketData = {
         type: 'profile',
         data: user.getPrivateDetails()
       }
       user.send(profile);
+    })
+
+    user.on('authenticate', async (data) => {
+      const {
+        key,
+        ts
+      } = data
+      const now = new Date()
+      const utcNow = new Date( now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds() );
+      const diff = Math.abs((ts*1) - utcNow.getTime())
+      if (diff > 60*5*1000) {
+        return; // Outdated.
+      }
+      const unencodedKey = new TextEncoder().encode(`${this.name}${ts}${this.signingKey}`)
+      const digest = await crypto.subtle.digest(
+        {
+          name: "SHA-256",
+        },
+        unencodedKey
+      )
+      const hex = [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('').toLowerCase();
+      if (`${key.toLowerCase()}` === hex) {
+        user.setRole('admin');
+        user.trigger('profile')
+      }
+    })
+
+    user.on('config', (config) => {
+      if (user.role !== 'admin') {
+        return;
+      }
+      this.config = `${config}`
+      this.storage.put('config', `${config}`);
+      this.broadcast({
+        type: "config",
+        data: this.config
+      })
+    })
+
+    user.on('broadcast', (data) => {
+      if (user.role !== 'admin') {
+        return;
+      }
+      const subscription = data && data.to
+      if (subscription) {
+        this.broadcastToSubscribers(data.to, {
+          type: data.type,
+          data: data.data
+        })
+      } else {
+        this.broadcast({
+          type: data.type,
+          data: data.data
+        })
+      }
     })
 
     user.on('subscribe', (channel) => {
@@ -288,15 +351,12 @@ export class ChatRoom {
     const details:RoomDetails = {
       id: `${this.controller.id}`,
       name: this.name || '',
-      config: '',
       count: this.sessions.length,
       increment: this.incrementValue,
       pollCount: Object.keys(this.polls).length,
+      config: this.config,
       ephemeralPollCount: Object.keys(this.ephemeralPolls).length
     }
-    try {
-      details.config = await this.storage.get('config') || '';
-    } catch(e) { }
     return details;
   }
 }
@@ -317,8 +377,6 @@ export interface SocketData {
   type: SocketDataTypes;
   data?: any
 }
-
-export interface Env {}
 
 export interface ExpandedDurableObjectState extends DurableObjectState {
   blockConcurrencyWhile(promise: () => Promise<void>): void;

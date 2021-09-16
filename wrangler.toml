@@ -6,6 +6,8 @@ workers_dev = true
 route = ""
 zone_id = ""
 
+vars = { ADMIN_SIGNING_KEY="CHANGEME" } # You might want to put that inside a secret instead, but for the purpose of this demo, we're making it a visible variable :)
+
 [build]
 command = "npm install && npm test && npm run build"
 [build.upload]
