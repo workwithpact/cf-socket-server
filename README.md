@@ -1,10 +1,5 @@
 # Pact's Socket Server
 
-
-## Note: You must use [wrangler](https://developers.cloudflare.com/workers/cli-wrangler/install-update) 1.17 or newer to use this repository.
-
-## Please read the [Durable Object documentation](https://developers.cloudflare.com/workers/learning/using-durable-objects) before diving in.
-
 ## What is this?
 This nifty little project is a swiss army knife for realtime backend projects. It is scoped to rooms, and encompasses multiple useful features.
 
