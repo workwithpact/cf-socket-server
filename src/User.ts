@@ -28,6 +28,7 @@ export default class User {
     this.getPublicDetails = this.getPublicDetails.bind(this)
     this.getPublicProperties = this.getPublicProperties.bind(this)
     this.processIncomingMessage = this.processIncomingMessage.bind(this)
+    this.setRole = this.setRole.bind(this)
     this.trigger = this.trigger.bind(this)
   }
 

@@ -251,11 +251,9 @@ Here's a sample Javascript implementation (relying on web crypto). Do note that 
 ```js
 const roomName = 'testRoom';
 const signingKey = 'deadbeef';
-
 const now = new Date();
-const utcNow = new Date( now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds() );
 
-const plaintextKey = new TextEncoder().encode(`${roomName}${utcNow.getTime()}${signingKey}`)
+const plaintextKey = new TextEncoder().encode(`${roomName}${now.getTime()}${signingKey}`)
 
 const digest = await crypto.subtle.digest(
   {
@@ -269,7 +267,7 @@ const authenticationKey = [...new Uint8Array(digest)].map(x => x.toString(16).pa
 console.log('The authentication key is', authenticationKey, 'and the payload should be', {
   type: 'authenticate',
   data: {
-    ts: utcNow.getTime(),
+    ts: now.getTime(),
     key: authenticationKey
   }
 })
