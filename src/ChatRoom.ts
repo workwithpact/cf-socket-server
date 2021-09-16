@@ -22,6 +22,7 @@ export class ChatRoom {
   sessions: User[];
   name?:string;
   incrementValue: number = 1;
+  counters:{[key: string]: number} = {};
   polls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
   ephemeralPolls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
 
@@ -163,12 +164,23 @@ export class ChatRoom {
       if (eventType === 'poll') {
         Object.keys(this.polls).filter(id => id === eventId || eventId === 'all').forEach(id => {
           const pollResults:SocketData = this.generatePollSocketData(id, 'poll');
-          user.send(`poll:${id}`, pollResults)
+          user.send(pollResults)
         })
       } else if(eventType === 'ephemeralPoll') {
         Object.keys(this.ephemeralPolls).filter(id => id === eventId || eventId === 'all').forEach(id => {
           const pollResults:SocketData = this.generatePollSocketData(id, 'ephemeralPoll');
-          user.send(`ephemeralPoll:${id}`, pollResults)
+          user.send(pollResults)
+        })
+      } else if(eventType === 'counter') {
+        Object.keys(this.counters).filter(id => id === eventId || eventId === 'all').forEach(id => {
+          const pollResults:SocketData = this.generatePollSocketData(id, 'ephemeralPoll');
+          user.send({
+            type: 'counter',
+            data: {
+              id,
+              value: this.counters[id] || 0
+            }
+          })
         })
       }
     })
@@ -214,6 +226,23 @@ export class ChatRoom {
     }
     user.on('poll', onPoll)
     user.on('ephemeralPoll', onPoll)
+
+    user.on('counter', (counter) => {
+      const id = counter && counter.id || 'default';
+      const value = counter ? counter.value * 1 : 1
+      if (isNaN(value)) {
+        return;
+      }
+      this.counters[id] = this.counters[id] || 0;
+      this.counters[id] += value
+      this.broadcastToSubscribers(`counter:${id}`, {
+        type: 'counter',
+        data: {
+          id,
+          value: this.counters[id]
+        }
+      });
+    })
 
     /* Chat */
 
@@ -282,7 +311,7 @@ export interface RoomDetails {
   ephemeralPollCount: number;
 }
 
-export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile' | 'ping';
+export type SocketDataTypes = 'config' | 'chat' | 'poll' | 'ephemeralPoll' | 'login' | 'join' | 'leave' | 'broadcast' | 'close' | 'subscribe' | 'unsubscribe' | 'profile' | 'ping' | 'counter';
 
 export interface SocketData {
   type: SocketDataTypes;
