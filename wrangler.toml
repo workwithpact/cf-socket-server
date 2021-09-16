@@ -15,6 +15,5 @@ main = "./index.mjs"
 
 [durable_objects]
 bindings = [
-  {name = "COUNTER", class_name = "CounterTs"},
   {name = "CHATROOM", class_name = "ChatRoom"}
 ]
