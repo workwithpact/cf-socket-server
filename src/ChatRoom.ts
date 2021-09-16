@@ -30,6 +30,7 @@ export class ChatRoom {
   signingKey?: string;
   config: string = '';
   relays: {[key: string]:User[]} = {}
+  bootupTime:number = (new Date()).getTime()
 
   constructor(controller: ExpandedDurableObjectState, env: Env) {
     this.storage = controller.storage;
@@ -444,7 +445,9 @@ export class ChatRoom {
       increment: this.incrementValue,
       pollCount: Object.keys(this.polls).length,
       config: this.config,
-      ephemeralPollCount: Object.keys(this.ephemeralPolls).length
+      ephemeralPollCount: Object.keys(this.ephemeralPolls).length,
+      bootupTime: this.bootupTime,
+      uptime: (new Date()).getTime() - this.bootupTime
     }
     return details;
   }
@@ -458,6 +461,8 @@ export interface RoomDetails {
   config: any;
   increment: number;
   pollCount: number;
+  bootupTime: number;
+  uptime: number;
   ephemeralPollCount: number;
 }
 
