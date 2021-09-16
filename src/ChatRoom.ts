@@ -24,6 +24,7 @@ export class ChatRoom {
   sessions: {[key: string]: User[]} = {};
   name?:string;
   incrementValue: number = 1;
+  incrementSinceRestart:number = 0;
   counters:{[key: string]: number} = {};
   polls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
   ephemeralPolls:{[key: string]:{[key: string]: {[key: string] : null}}} = {}
@@ -173,7 +174,7 @@ export class ChatRoom {
     const userId = searchParams.get('session') || parse(request?.headers.get('Cookie') || '')[cookieName] || null
     
     client.accept(); // Accept the websocket connection, telling CF we will be handling this internally and won't be passing it off
-
+    ++this.incrementSinceRestart;
     const suffix = ++this.incrementValue; // Increment our suffix
 
     const user:User = await getUser({ // Getting our user; If the id exists, it will retrieve it from memory if available. Otherwise, a new user will be created.
@@ -443,6 +444,7 @@ export class ChatRoom {
       count: this.getAllSessions().length,
       uniqueCount: Object.keys(this.sessions).length,
       increment: this.incrementValue,
+      incrementSinceRestart: this.incrementSinceRestart,
       pollCount: Object.keys(this.polls).length,
       config: this.config,
       ephemeralPollCount: Object.keys(this.ephemeralPolls).length,
@@ -463,6 +465,7 @@ export interface RoomDetails {
   pollCount: number;
   bootupTime: number;
   uptime: number;
+  incrementSinceRestart: number;
   ephemeralPollCount: number;
 }
 
