@@ -39,8 +39,31 @@ export class ChatRoom {
     this.signingKey = env.ADMIN_SIGNING_KEY;
     setStorage(this.storage);
     controller.blockConcurrencyWhile(async () => {
-      let stored:string | null | undefined = await this.storage.get("config");
-      this.config = stored || '';
+      let storedConfig:string | null | undefined = await this.storage.get("config");
+      this.config = storedConfig || '';
+      let storedState:RoomState = await this.storage.get('state') || {
+        polls: {},
+        counters: {},
+        incrementValue: 0
+      }
+      this.polls = storedState.polls
+      this.counters = storedState.counters
+      this.incrementValue = storedState.incrementValue
+    })
+    setInterval(() => {
+      this.saveRoomState()
+    }, 1000)
+  }
+
+  saveRoomState() {
+    const roomState:RoomState = {
+      polls: this.polls,
+      incrementValue:this.incrementValue,
+      counters: this.counters
+    }
+    // @ts-ignore : We're missing the "real" signature of put().
+    this.storage?.put(`state`, roomState, {
+      allowUnconfirmed: true
     })
   }
 
@@ -447,4 +470,10 @@ export interface SocketData {
 
 export interface ExpandedDurableObjectState extends DurableObjectState {
   blockConcurrencyWhile(promise: () => Promise<void>): void;
+}
+
+export interface RoomState {
+  polls: {[key: string]:{[key: string]: {[key: string] : null}}};
+  counters: {[key: string]: number};
+  incrementValue: number;
 }
