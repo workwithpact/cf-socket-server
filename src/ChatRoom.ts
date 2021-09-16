@@ -13,8 +13,9 @@ declare global {
   }
 }
 
-import User from './User'
+import User, { getUser, setStorage } from './User'
 import { Env } from './index'
+import { parse } from 'cookie'
 
 export class ChatRoom {
   storage: DurableObjectStorage;
@@ -36,10 +37,11 @@ export class ChatRoom {
     this.env = env;
     this.sessions = {}
     this.signingKey = env.ADMIN_SIGNING_KEY;
+    setStorage(this.storage);
     controller.blockConcurrencyWhile(async () => {
       let stored:string | null | undefined = await this.storage.get("config");
       this.config = stored || '';
-  })
+    })
   }
 
   // The system will call fetch() whenever an HTTP request is sent to this Object. Such requests
@@ -64,7 +66,7 @@ export class ChatRoom {
           })}))
       case '/websocket' :
         if (request.headers.get("Upgrade") != "websocket") {
-          return new Response("expected websocket", {status: 400});
+          return new Response("expected websocket", {status: 400, headers: {'Set-Cookie': 'xxx=abc'}});
         }
         let pair = new WebSocketPair();
         let user:User|null = null;
@@ -73,12 +75,14 @@ export class ChatRoom {
         } catch(e:any) {
           console.error('Something went wrong handling the session...', e.message, e.stack)
         }
-        const headers:{[key: string]:string} = {
-          'X-Socket-Server': 'Pact Studio <workwithpact.com>'
-        };
+        const headers = new Headers()
         if (user && user.id) {
-          headers['Set-Cookie'] = `${this.controller.id}_session=${user && user.id}`
+          headers.set('Set-Cookie',`${this.controller.id}_session=${encodeURIComponent(user && user.id)}; SameSite=None; Secure`)
+          headers.append('X-Session-Id', `${user && user.id}`);
         }
+        headers.append('X-Socket-Server', `Pact Studio <workwithpact.com>`);
+
+
         return new Response(null, { status: 101, webSocket: pair[0], headers });
       default:
         return new Response("Oh, the sadness! This route does not exist.", {
@@ -139,26 +143,27 @@ export class ChatRoom {
     })
   }
   async handleSession(client: WebSocket, request?: Request) {
-    client.accept();
-    const suffix = ++this.incrementValue;
-    const user:User = new User({
+    const url = new URL(request?.url || '');
+    const searchParams = new URLSearchParams(url.search);
+    const cookieName:string = `${this.controller.id}_session`
+    const userId = searchParams.get('session') || parse(request?.headers.get('Cookie') || '')[cookieName] || null
+    
+    client.accept(); // Accept the websocket connection, telling CF we will be handling this internally and won't be passing it off
+
+    const suffix = ++this.incrementValue; // Increment our suffix
+
+    const user:User = await getUser({ // Getting our user; If the id exists, it will retrieve it from memory if available. Otherwise, a new user will be created.
       suffix,
+      id: userId,
       socket: client,
-      connectionDetails: request?.cf
+      connectionDetails: request?.cf,
     })
     this.addUser(user)
 
     const config:SocketData = {
       type: "config",
-      data: {}
+      data: this.config
     }
-
-    try {
-      config.data = JSON.parse((await this.getRoomDetails()).config)
-    } catch(e) {
-      console.error('Something went terribly, terribly wrong.', e)
-    }
-
     user.send(config);
 
     const profile:SocketData = {
@@ -168,7 +173,7 @@ export class ChatRoom {
     user.send(profile);
 
     user.on('login', (properties) => {
-      user.properties = properties || {};
+      user.setProperties(properties);
       const profile:SocketData = {
         type: 'profile',
         data: user.getPrivateDetails()
@@ -269,7 +274,6 @@ export class ChatRoom {
     })
 
     user.on('subscribe', (channel) => {
-      user.properties = user.properties || {}
       user.properties.subscriptions = user.properties.subscriptions || {}
       const parts = `${channel}`.split(':');
       const eventType = parts.shift();
@@ -306,7 +310,6 @@ export class ChatRoom {
     })
 
     user.on('unsubscribe', (channel) => {
-      user.properties = user.properties || {}
       user.properties.subscriptions = user.properties.subscriptions || {}
       const parts = `${channel}`.split(':');
       const eventType = parts.shift();

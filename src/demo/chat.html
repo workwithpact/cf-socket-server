@@ -122,10 +122,11 @@ input#username{
   let hostname = window.location.host
   let params = new URLSearchParams(window.location.search)
   let room = params.get('room') || 'demo';
+  let session = params.get('session') || window.sessionStorage.getItem(`${room}_session`) || null;
   if (!hostname || hostname.indexOf('.workers.dev') === -1) {
     hostname = 'socket-server.213a.workers.dev';
   }
-  currentWebSocket = new WebSocket(`wss://${hostname}/websocket?room=${encodeURIComponent(room)}`)
+  currentWebSocket = new WebSocket(`wss://${hostname}/websocket?room=${encodeURIComponent(room)}${session ? `&session=${session}` : ''}`)
   currentWebSocket.addEventListener('open', () => {
     document.getElementById('loading').remove()
   });
@@ -148,6 +149,13 @@ input#username{
       messageHolder.appendChild(userHolder)
       messageHolder.appendChild(messageContentHolder)
       logs.appendChild(messageHolder)
+    } else if(data && data.type === 'profile') {
+      if (data.data && data.data.properties && data.data.properties.name) {
+        usernameForm.classList.remove('active')
+        chat.classList.add('active')
+        send('subscribe', 'chat');
+      }
+      window.sessionStorage.setItem(`${room}_session`, data.data.id)
     }
   }))
 
@@ -156,9 +164,8 @@ input#username{
     send('login', {
       name: usernameInput.value
     });
-    send('subscribe', 'chat');
-    usernameForm.classList.remove('active')
-    chat.classList.add('active')
+    // usernameForm.classList.remove('active')
+    // chat.classList.add('active')
   })
 
   messageForm.addEventListener('submit', (event) => {

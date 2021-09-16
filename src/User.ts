@@ -1,10 +1,43 @@
 import { uuid } from '@cfworker/uuid';
 import { SocketData, SocketDataTypes } from './ChatRoom';
 
+let storage:DurableObjectStorage|null = null;
+const sharedUserData:{[key: string]: SharedUserData} = {}
+
+export function setStorage(store:DurableObjectStorage) {
+  storage = store;
+}
+
+export function getStorage():DurableObjectStorage|null {
+  return storage;
+}
+
+export async function getUser({id=null, suffix=0, connectionDetails={}, socket = undefined}: UserData):Promise<User> {
+  let userObject: UserData = {
+    id: id || uuid(),
+    connectionDetails,
+    socket
+  }
+  if (id) {
+    //@ts-ignore : We're missing the "real" signature of get().
+    const fromStorage:{[key: srtring]:any} = await storage.get(`user_${id}`, {
+      allowConcurrency: true
+    }) || {}
+    userObject =  {...fromStorage,...userObject}
+   
+  }
+  if (!userObject.suffix) {
+    userObject.suffix = suffix;
+  }
+
+  const user = new User(userObject);
+  user.saveUser();
+  return user;
+}
+
 export default class User {
   id: string;
   suffix: number;
-  name?: string;
   properties: {[key: string]: any}
   connectionDetails: {[key: string]: any}
   socket?: WebSocket | null;
@@ -14,12 +47,19 @@ export default class User {
   lastCommunicationTimestamp?:number;
   role: 'user' | 'admin' = 'user'
 
-  constructor({id=null, suffix=0, name='', properties={}, connectionDetails={}, socket = undefined} : UserData) {
+  constructor({id=null, suffix=0, properties={}, connectionDetails={}, socket = undefined} : UserData) {
     this.id = id || uuid();
+    
     this.suffix = suffix || 0
-    this.name = name || ''
-    this.properties = properties || {}
     this.connectionDetails = connectionDetails || {}
+
+    sharedUserData[this.id] = sharedUserData[this.id] || {
+      properties: properties || {},
+      instances: new WeakSet()
+    }
+    sharedUserData[this.id].instances.add(this)
+    this.properties = sharedUserData[this.id].properties
+
     this.setSocket(socket)
 
     this.send = this.send.bind(this)
@@ -30,12 +70,29 @@ export default class User {
     this.processIncomingMessage = this.processIncomingMessage.bind(this)
     this.setRole = this.setRole.bind(this)
     this.trigger = this.trigger.bind(this)
+    this.setProperties = this.setProperties.bind(this)
+    this.getProperties = this.getProperties.bind(this)
+    this.saveUser = this.saveUser.bind(this)
   }
 
   setRole(newRole:'user' | 'admin') {
     this.role = newRole;
   }
-
+  saveUser() {
+    const userData:UserData = {
+      id: this.id,
+      suffix: this.suffix,
+      properties: this.getProperties()
+    }
+    // @ts-ignore : We're missing the "real" signature of put().
+    storage?.put(`user_${this.id}`, userData, {
+      allowUnconfirmed: true
+    })
+  }
+  setProperties(properties:{[key: string]:any}) {
+    sharedUserData[this.id].properties = {...properties};
+    this.saveUser()
+  }
   setSocket(socket?: WebSocket | null) {
     this.socket = socket;
     this.connected = !!socket
@@ -121,27 +178,28 @@ export default class User {
 
   getPublicDetails():UserData {
     return {
-      name: this.name,
       suffix: this.suffix,
       properties: this.getPublicProperties()
     }
   }
 
   close() {
+    this.saveUser();
     this.trigger('close');
   }
-
+  getProperties(): {[key: string]: any} {
+    return sharedUserData[this.id].properties;
+  }
   getPublicProperties(): {[key: string]: any} {
     const publicProperties:{[key: string]: any} = {}
-    Object.keys(this.properties || {}).filter(v => v.indexOf('_') !== 0 && v !== 'subscriptions').forEach(k => publicProperties[k] = this.properties[k])
+    Object.keys(this.getProperties() || {}).filter(v => v.indexOf('_') !== 0 && v !== 'subscriptions').forEach(k => publicProperties[k] = this.getProperties()[k])
     return publicProperties;
   }
 
   getPrivateDetails():UserData {
     return {
-      name: this.name,
       suffix: this.suffix,
-      properties: this.properties,
+      properties: this.getProperties(),
       id: this.id,
       connectionDetails: this.connectionDetails,
       role: this.role
@@ -170,9 +228,13 @@ export default class User {
 export interface UserData {
   id?: string | null;
   suffix?: number | null;
-  name?: string | null;
-  properties?: {[key: string]: any} | null;
+  properties?: {[key: string]: any};
   connectionDetails?: {[key: string]: any} | null;
   socket?: WebSocket | null;
   role?: 'user' | 'admin'
+}
+
+export interface SharedUserData {
+  properties: {[key: string]: any};
+  instances: WeakSet<User>
 }
