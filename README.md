@@ -1,5 +1,25 @@
 # Pact's Socket Server
 
+- [What is this?](#what-is-this)
+- [How do I use this?](#how-do-i-use-this)
+- [Supported features](#what-features-are-supported)
+- - [Setting profile properties](#setting-profile-properties-login)
+- - [Getting your profile](#getting-your-profile-profile)
+- - [Subscribing to events](#subscribing-to-events-subscribe)
+- - [Unsubscribing from events](#unsubscribing-from-events-unsubscribe)
+- - [Broadcasting chat messages](#broadcasting-chat-messages-chat)
+- - [Casting a vote](#casting-a-vote-poll)
+- - [Casting an ephemeral vote](#casting-an-ephemeral-vote-ephemeralpoll)
+- - [Incrementing (or decrementing) a counter](#incrementing-or-decrementing-a-counter-counter)
+- - [Receving server configuration changes](#receving-server-configuration-changes-config)
+- - [Receving server broadcasts](#receving-server-broadcasts-broadcast)
+- - 🔒 [User roles & Authentication](#user-roles-authenticate)
+- - 🔒 [Emitting custom events](#user-roles-authenticate)
+- - 🔒 [Changing the room's configuration](#user-roles-authenticate)
+- - 🔒 [Advanced use case: Relaying events](#)
+- - 🔒 [Advanced use case: Deleting relays](#)
+
+
 ## What is this?
 This nifty little project is a swiss army knife for realtime backend projects. It is scoped to rooms, and encompasses multiple useful features.
 
@@ -224,7 +244,7 @@ Example payload:
 }
 ```
 
-### User roles: `authenticate`
+### 🔒 User roles: `authenticate`
 By default, users inherit the `user` role.
 You can change to an `admin` role by calling `authenticate` and passing along the current (UTC) timestamp and the SHA-256 hexadecimal hash of `{ROOMNAME}{TIMESTAMP_IN_MILISECONDS}{SIGNING_KEY}`.
 
@@ -268,7 +288,7 @@ console.log('The authentication key is', authenticationKey, 'and the payload sho
 })
 ```
 
-### Emitting broadcasts as the server: `broadcast`
+### 🔒 Emitting custom events: `broadcast`
 Once successfully connected to the server as an admin through the `authenticate` call, you will be able to send out broadcast messages as the server.
 
 Using the `broadcast` call, you can essentially simulate any payload type. You can even come up with your own if you choose to.
@@ -312,7 +332,7 @@ Note that you can also target the broadcast messages to users subscribing to spe
 }
 ```
 
-### Changing the room's configuration
+### 🔒 Changing the room's configuration
 Once successfully connected to the server as an admin through the `authenticate` call, you will be able to update the server's configuration. Updates to the configuration are saved in the underlying durable object storage, and sent out to every user upon changes and upon connecting.
 
 Due to the underlying storage engine, the configuration can only be a string. Nothing stops you from `JSON.stringify`ing it beforehand though.
@@ -324,7 +344,7 @@ Due to the underlying storage engine, the configuration can only be a string. No
 }
 ```
 
-### [Advanced use case!] relaying messages to the admin: `relay`
+### 🔒 [Advanced use case!] relaying messages to the admin: `relay`
 Maybe you'd like to create your own logic for specific (made up!) event types? 
 As an example, if you were to create a tic-tac-toe game and wanted a middleware to validate moves before broadcasting them, ensuring it is the player's turn, you could do that.
 
@@ -356,7 +376,7 @@ Now, whenever a user issues a `report` event, you will receive a payload contain
 }
 ```
 
-### [Advanced use case!] turning off a relay: `deleteRelay`
+### 🔒 [Advanced use case!] turning off a relay: `deleteRelay`
 Just like you can subscribe to receive relayed events, you can also delete those relays:
 
 ```json
