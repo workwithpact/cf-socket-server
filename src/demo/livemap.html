@@ -45,9 +45,10 @@ body { margin: 0; padding: 0; }
   const markers = {};
   let hostname = window.location.host
   let params = new URLSearchParams(window.location.search)
+  const pollId = params.get('poll') || 'liveMap';
   let room = params.get('room') || 'demo';
   if (!hostname || hostname.indexOf('.workers.dev') === -1) {
-    hostname = 'socket-server.213a.workers.dev';
+    hostname = 'websockets.workwithpact.com';
   }
   let currentWebSocket = null;
   let mapLoaded = false;
@@ -96,19 +97,19 @@ body { margin: 0; padding: 0; }
     currentWebSocket = new WebSocket(`wss://${hostname}/websocket?room=${encodeURIComponent(room)}`)
     currentWebSocket.addEventListener('open', () => {
       document.getElementById('loading').remove()
-      send('subscribe', 'ephemeralPoll:liveMap')
+      send('subscribe', 'ephemeralPoll:'+pollId)
     });
     currentWebSocket.addEventListener('message', msg => {
       const data = JSON.parse(msg.data);
       switch(data.type) {
         case 'profile': 
           send('ephemeralPoll', {
-            id: 'liveMap',
+            id: pollId,
             answer: `${data.data.connectionDetails.latitude},${data.data.connectionDetails.longitude}`
           })
           break;
         case 'ephemeralPoll':
-          if (data.data.id === 'liveMap') {
+          if (data.data.id === pollId) {
             updatePins(data.data.stats)
           }
           break;
