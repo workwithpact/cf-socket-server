@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "socket-server",
+  "name": "pact-socket-server",
   "version": "1.0.0",
-  "description": "A template for kick starting a Cloudflare Workers project",
+  "description": "A WebSocket server, room-based, on CloudFlare Workers Durable Objects, packed with useful functionality: Interactive Polls, Interactive Ephemeral Polls, Chat, User Properties, Interactive Counters, Relay Support & more",
   "module": "./dist/index.mjs",
   "scripts": {
     "build": "rollup -c",
