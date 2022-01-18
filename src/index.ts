@@ -53,6 +53,8 @@ async function handleRequest(request: Request, env: Env) {
         }
       })
   }
+  // Disabled due to high costs
+  return new Response('This service has been disabled temporarily.')
   const room:string = params.get('room') || 'default';
   const chatRoomId = env.CHATROOM.idFromName(room);
   const chatRoom = await env.CHATROOM.get(chatRoomId);
