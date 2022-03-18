@@ -23,6 +23,8 @@
 ## What is this?
 This nifty little project is a swiss army knife for realtime backend projects. It is scoped to rooms, and encompasses multiple useful features.
 
+See a very quick & dirty demo [here](https://websockets.workwithpact.com/)
+
 ## How do I use this?
 You don't have to install or deploy this to make use of it, assuming you're working for/with Pact :).
 
